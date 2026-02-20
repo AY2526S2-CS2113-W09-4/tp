@@ -1,4 +1,4 @@
-# Duke
+# CG2StocksTracker
 
 {Give product intro here}
 
