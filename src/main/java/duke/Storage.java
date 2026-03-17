@@ -18,6 +18,7 @@ public class Storage {
         createFileIfMissing();
 
         PortfolioBook portfolioBook = new PortfolioBook();
+        String activePortfolioName = null;
 
         try {
             List<String> lines = Files.readAllLines(filePath);
@@ -32,8 +33,11 @@ public class Storage {
 
                 switch (recordType) {
                 case "ACTIVE":
-                    if (parts.length >= 2 && !parts[1].isBlank()) {
-                        portfolioBook.usePortfolio(parts[1]);
+                    if (parts.length != 2) {
+                        throw new IllegalArgumentException("Corrupted storage file.");
+                    }
+                    if (!parts[1].isBlank()) {
+                        activePortfolioName = parts[1];
                     }
                     break;
                 case "PORTFOLIO":
@@ -51,6 +55,10 @@ public class Storage {
                 default:
                     throw new IllegalArgumentException("Corrupted storage file.");
                 }
+            }
+
+            if (activePortfolioName != null) {
+                portfolioBook.usePortfolio(activePortfolioName);
             }
 
             return portfolioBook;
