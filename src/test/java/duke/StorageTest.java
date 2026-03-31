@@ -34,7 +34,7 @@ public class StorageTest {
         book.usePortfolio("tech");
 
         Portfolio portfolio = book.getActivePortfolio();
-        portfolio.addHolding(AssetType.STOCK, "AAPL", 10, 150);
+        portfolio.addHolding(AssetType.STOCK, "AAPL", 10, 150, 25);
 
         storage.save(book);
 
@@ -45,6 +45,30 @@ public class StorageTest {
 
         assertNotNull(loadedPortfolio);
         assertTrue(loadedPortfolio.hasHolding(AssetType.STOCK, "AAPL"));
+        assertEquals(152.5, loadedPortfolio.getHolding(AssetType.STOCK, "AAPL").getAverageBuyPrice());
+    }
+
+    @Test
+    void save_thenLoad_restoresFeeAdjustedRealizedPnl(@TempDir Path tempDir) throws AppException {
+        Path file = tempDir.resolve("data.txt");
+        Storage storage = new Storage(file.toString());
+
+        PortfolioBook book = new PortfolioBook();
+        book.createPortfolio("income");
+        book.usePortfolio("income");
+
+        Portfolio portfolio = book.getActivePortfolio();
+        portfolio.addHolding(AssetType.ETF, "QQQ", 2, 400, 20);
+        portfolio.removeHolding(AssetType.ETF, "QQQ", 1.0, 600.0, 15);
+
+        storage.save(book);
+
+        PortfolioBook loaded = storage.load();
+        Portfolio loadedPortfolio = loaded.getPortfolio("income");
+
+        assertNotNull(loadedPortfolio);
+        assertEquals(175.0, loadedPortfolio.getTotalRealizedPnl());
+        assertEquals(410.0, loadedPortfolio.getHolding(AssetType.ETF, "QQQ").getAverageBuyPrice());
     }
 
     @Test
@@ -53,7 +77,7 @@ public class StorageTest {
         Storage storage = new Storage(storageFile.toString());
 
         Portfolio portfolio = new Portfolio("test");
-        portfolio.addHolding(AssetType.STOCK, "AAPL", 5, 180);
+        portfolio.addHolding(AssetType.STOCK, "AAPL", 5, 180, 0);
 
         Path csv = tempDir.resolve("prices.csv");
 
@@ -77,7 +101,7 @@ public class StorageTest {
         Storage storage = new Storage(storageFile.toString());
 
         Portfolio portfolio = new Portfolio("test");
-        portfolio.addHolding(AssetType.STOCK, "AAPL", 5, 180);
+        portfolio.addHolding(AssetType.STOCK, "AAPL", 5, 180, 0);
 
         Path csv = tempDir.resolve("prices.csv");
 
