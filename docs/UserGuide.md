@@ -1,54 +1,52 @@
-# User Guide
+User Guide
 
-## Introduction
-
+Introduction
 CG2 Stocks Tracker is a command-line portfolio tracker for recording holdings, updating market prices, and viewing realized/unrealized P&L.
 
-## Quick Start
+Application data, including portfolios, holdings, average buy prices, latest saved prices, and realized P&L, is automatically saved and restored across restarts.
 
-1. Ensure Java 17 or above is installed.
-2. Build and run from the project root:
-	 - Windows: `gradlew.bat run`
-	 - macOS/Linux: `./gradlew run`
-3. Use `/help` in the app to list all commands.
+Quick Start
+Ensure Java 17 or above is installed.
+Build and run from the project root:
+Windows: gradlew.bat run
+macOS/Linux: ./gradlew run
+Use /help in the app to list all commands.
 
-## Features
+Features
 
-### Create portfolio: `/create`
+Create portfolio: /create
 Creates a portfolio.
 
-Format: `/create NAME`
+Format: /create NAME
 
-Example:
-`/create retirement`
+Example: /create retirement
 
-### Switch active portfolio: `/use`
+Switch active portfolio: /use
 Switches the active portfolio.
 
-Format: `/use NAME`
+Format: /use NAME
 
-Example:
-`/use retirement`
+Example: /use retirement
 
-### List portfolios/holdings: `/list`
-
+List portfolios/holdings: /list
 Formats:
-- `/list`
-- `/list --stock`
-- `/list --etf`
-- `/list --bond`
-- `/list --portfolios`
+
+/list
+/list --stock
+/list --etf
+/list --bond
+/list --portfolios
 
 Notes:
-- `/list` shows all holdings in the active portfolio.
-- Type filters show only that asset type in the same tabular format.
-- `/list --portfolios` shows each portfolio's realized and unrealised P&L in alphabetical order.
 
-### Add holding: `/add`
+/list shows all holdings in the active portfolio.
+Type filters show only that asset type in the same tabular format.
+/list --portfolios shows each portfolio's realized and unrealised P&L in alphabetical order.
+
+Add holding: /add
 Adds units to a holding and requires purchase price per unit.
 
-Format:
-`/add --type TYPE --ticker TICKER --qty QTY --price PRICE`
+Format: /add --type TYPE --ticker TICKER --qty QTY --price PRICE
 
 Notes:
 - `TYPE` must be one of `STOCK`, `ETF`, `BOND`.
@@ -57,22 +55,22 @@ Notes:
 - Fee values (when provided) must be `>= 0`.
 - If holding already exists, quantity is increased and average buy price is recalculated using weighted average.
 
-Example:
-`/add --type STOCK --ticker VOO --qty 1 --price 300`
+
+Example: /add --type STOCK --ticker VOO --qty 1 --price 300
 
 Example with fees:
 `/add --type STOCK --ticker VOO --qty 1 --price 300 --brokerage 1.50 --fx 2.00 --platform 0.50`
 
 Output contains:
-- Added/updated holding details.
-- Quantity.
-- Average buy price.
 
-### Remove holding units (partial or full): `/remove`
+Added/updated holding details.
+Quantity.
+Average buy price.
+
+Remove holding units (partial or full): /remove
 Sells part or all of a holding and records realized P&L.
 
-Format:
-`/remove --type TYPE --ticker TICKER --qty QTY --price PRICE`
+Format: /remove --type TYPE --ticker TICKER [--qty QTY] [--price PRICE]
 
 Optional behavior:
 - If `--qty` is omitted: sell all units of the holding.
@@ -104,70 +102,84 @@ Output contains:
 - Total fees used for that sale (when non-zero).
 - Realized P&L for that sale (signed + / -).
 
-### Set market price: `/set`
+Sold quantity.
+Effective sell price used.
+Realized P&L for that sale (signed + / -).
+
+Set market price: /set
 Sets the latest market price for a ticker. This does not sell anything.
 
-Format:
-`/set --ticker TICKER --price PRICE`
+Format: /set --ticker TICKER --price PRICE
 
 Notes:
-- `PRICE > 0`.
-- Updates all holdings in active portfolio with matching ticker.
-- Used by `/value` for unrealized P&L and by `/remove` as fallback sell price.
 
-Example:
-`/set --ticker VOO --price 600`
+PRICE > 0.
+Updates all holdings in active portfolio with matching ticker.
+Used by /value for unrealized P&L and by /remove as fallback sell price.
+Latest saved prices are restored after restarting the application.
+
+Example: /set --ticker VOO --price 600
 
 Output contains:
-- Price update confirmation only.
 
-### Bulk set prices from CSV: `/setmany`
+Price update confirmation only.
+
+Bulk set prices from CSV: /setmany
 Loads prices from CSV into active portfolio.
 
-Format:
-`/setmany --file FILEPATH`
+Format: /setmany --file FILEPATH
 
-CSV header must be:
-`ticker,price`
+CSV header must be: ticker,price
 
-### View valuation and P&L: `/value`
+View valuation and P&L: /value
 Shows portfolio-level current total value, realized P&L, and unrealized P&L by holding.
 
-Format:
-`/value`
+Format: /value
 
 Output contains:
-- `Current total value`: sum of `quantity * current unit price` across holdings in the active portfolio.
-- `Realized P&L`: cumulative P&L from completed sells (positive or negative).
-- `Unrealised P&L by holding`: one row per holding.
-- `Total unrealised P&L`: sum across holdings.
+
+Current total value: sum of quantity * current unit price across holdings in the active portfolio.
+Realized P&L: cumulative P&L from completed sells (positive or negative).
+Unrealised P&L by holding: one row per holding.
+Total unrealised P&L: sum across holdings.
 
 Example scenario:
-1. `/add --type STOCK --ticker VOO --qty 1 --price 300`
-2. `/set --ticker VOO --price 600`
-3. `/value`
+
+/add --type STOCK --ticker VOO --qty 1 --price 300
+/set --ticker VOO --price 600
+/value
 
 Expected result summary:
-- Realized P&L = `+0.00` (nothing sold yet)
-- Unrealized P&L for VOO = `+300.00`
-- Total unrealized P&L = `+300.00`
 
-### Help: `/help`
+Realized P&L = +0.00 (nothing sold yet)
+Unrealized P&L for VOO = +300.00
+Total unrealized P&L = +300.00
+
+Unrealized P&L is calculated using:
+(last price - average buy price) × quantity
+
+All values remain consistent after restarting the application because the required storage fields are saved and restored.
+
+Help: /help
 Shows the command list.
 
-### Exit: `/exit`
+Exit: /exit
 Exits the application.
 
-## FAQ
+FAQ
+Q: Why does /remove fail when I omit --price?
 
-**Q**: Why does `/remove` fail when I omit `--price`?
+A: If you omit --price, the app first uses the last /set price for that ticker. If no /set price exists yet, it uses the holding's initial add price.
 
-**A**: If you omit `--price`, the app first uses the last `/set` price for that ticker. If no `/set` price exists yet, it uses the holding's initial add price.
+Q: How is average buy price calculated?
 
-**Q**: How is average buy price calculated?
+A: Weighted average cost basis is used: newAvg = (oldQty * oldAvg + addedQty * addedPrice) / (oldQty + addedQty)
 
-**A**: Weighted average cost basis is used:
-`newAvg = (oldQty * oldAvg + addedQty * addedPrice) / (oldQty + addedQty)`
+Q: Will my data persist after I exit the app?
+
+A: Yes. Portfolios, holdings, average buy prices, latest saved prices, and realized P&L are automatically saved and restored when the application restarts.
+
+Q: What happens to older save files?
 
 If fees are provided for `/add`, they are included in the purchase cost before calculating the new average buy price.
 
