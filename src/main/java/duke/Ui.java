@@ -9,6 +9,8 @@ public class Ui {
     private static final DecimalFormat MONEY_FORMAT = new DecimalFormat("0.00");
     private static final DecimalFormat NUMBER_FORMAT = new DecimalFormat("0.############");
     private static final String DIVIDER = "----------------------------------------";
+    private static final int CHART_SIDE_WIDTH = 23;
+    private static final int TICKER_WIDTH = 5;
 
     /**
      * Reads the next user command from standard input.
@@ -105,7 +107,7 @@ public class Ui {
                    /set --ticker TICKER --price PRICE
                    /setmany --file FILEPATH
                    /value
-                   /insights [OPTIONS]
+                   /insights [--type stock|etf|bond] [--top N] [--chart]
                    /help
                    /exit
                    """;
@@ -247,7 +249,7 @@ public class Ui {
      * @param portfolio portfolio to inspect.
      */
     public void showInsightsTable(Portfolio portfolio) {
-        showInsightsTable(portfolio, null, null);
+        showInsightsTable(portfolio, null, null, false);
     }
 
     /**
@@ -256,8 +258,9 @@ public class Ui {
      * @param portfolio portfolio to inspect.
      * @param filterType optional asset-type filter; null means all holdings.
      * @param topN optional max number of holdings to display; null means all.
+     * @param showChart whether to include a diverging P&L chart.
      */
-    public void showInsightsTable(Portfolio portfolio, AssetType filterType, Integer topN) {
+    public void showInsightsTable(Portfolio portfolio, AssetType filterType, Integer topN, boolean showChart) {
         assert portfolio != null : "portfolio must not be null";
         System.out.println("Insights for portfolio: " + portfolio.getName());
 
@@ -340,6 +343,10 @@ public class Ui {
                     lastText,
                     unrealizedText,
                     unrealizedPctText));
+        }
+
+        if (showChart) {
+            printInsightsChart(holdings);
         }
 
         int unpricedCount = holdings.size() - pricedCount;
@@ -435,5 +442,70 @@ public class Ui {
             return "";
         }
         return ticker.length() <= 5 ? ticker : ticker.substring(0, 5);
+    }
+
+    private void printInsightsChart(List<Holding> holdings) {
+        double maxAbsPercent = 0.0;
+        for (Holding holding : holdings) {
+            if (!holding.hasPrice()) {
+                continue;
+            }
+            double costBasis = holding.getQuantity() * holding.getAverageBuyPrice();
+            if (costBasis <= 0) {
+                continue;
+            }
+            double unrealizedPercent = holding.getUnrealizedPnl() / costBasis;
+            maxAbsPercent = Math.max(maxAbsPercent, Math.abs(unrealizedPercent));
+        }
+
+        if (maxAbsPercent == 0.0) {
+            maxAbsPercent = 1.0;
+        }
+
+        System.out.println("\nP&L chart (loss | gain):");
+        System.out.println("Scale: full side width = " + formatSignedPercent(maxAbsPercent));
+        System.out.println(String.format("%-" + TICKER_WIDTH + "s %s",
+                "",
+                "-".repeat(CHART_SIDE_WIDTH) + "|" + "+".repeat(CHART_SIDE_WIDTH)));
+        System.out.println(String.format("%-" + TICKER_WIDTH + "s %s",
+                "",
+                "loss" + " ".repeat(CHART_SIDE_WIDTH - 4)
+                        + "|"
+                        + " ".repeat(CHART_SIDE_WIDTH - 4) + "gain"));
+        for (Holding holding : holdings) {
+            double costBasis = holding.getQuantity() * holding.getAverageBuyPrice();
+            double unrealizedPercent = 0.0;
+            if (holding.hasPrice() && costBasis > 0) {
+                unrealizedPercent = holding.getUnrealizedPnl() / costBasis;
+            }
+            String bar = buildDivergingBar(unrealizedPercent, maxAbsPercent);
+            System.out.println(String.format("%-" + TICKER_WIDTH + "s %s %10s",
+                    toMaxTickerWidth(holding.getTicker()),
+                    bar,
+                    formatSignedPercent(unrealizedPercent)));
+        }
+    }
+
+    private String buildDivergingBar(double value, double maxAbsValue) {
+        int scaledUnits = (int) Math.round((Math.abs(value) / maxAbsValue) * CHART_SIDE_WIDTH);
+        if (scaledUnits > CHART_SIDE_WIDTH) {
+            scaledUnits = CHART_SIDE_WIDTH;
+        }
+
+        if (value > 0) {
+            return " ".repeat(CHART_SIDE_WIDTH)
+                    + "|"
+                    + "+".repeat(scaledUnits)
+                + " ".repeat(CHART_SIDE_WIDTH - scaledUnits);
+        }
+
+        if (value < 0) {
+            return " ".repeat(CHART_SIDE_WIDTH - scaledUnits)
+                    + "-".repeat(scaledUnits)
+                    + "|"
+                + " ".repeat(CHART_SIDE_WIDTH);
+        }
+
+        return " ".repeat(CHART_SIDE_WIDTH) + "|" + " ".repeat(CHART_SIDE_WIDTH);
     }
 }
