@@ -71,6 +71,8 @@ package Model {
     class PortfolioBook
     class Portfolio
     class Holding
+    class Watchlist
+    class WatchlistItem
 }
 
 package Storage {
@@ -84,6 +86,8 @@ Parser --> ParsedCommand
 CG2StocksTracker --> PortfolioBook
 PortfolioBook --> Portfolio
 Portfolio --> Holding
+CG2StocksTracker --> Watchlist
+Watchlist --> WatchlistItem
 
 CG2StocksTracker --> Storage
 @enduml
@@ -137,7 +141,7 @@ This design keeps the application loop simple: it never inspects raw strings its
 `CommandType` is a Java `enum` that enumerates every command the application understands:
 
 ```
-CREATE, USE, LIST, ADD, REMOVE, SET, SET_MANY, VALUE, HELP, EXIT
+CREATE, USE, LIST, ADD, REMOVE, WATCH, SET, SET_MANY, VALUE, INSIGHTS, HELP, EXIT
 ```
 
 Its role is to serve as the single authoritative list of valid commands. Using an enum instead of raw strings eliminates
@@ -164,11 +168,11 @@ public record ParsedCommand(
     String ticker,
     Double quantity,
     Double price,
-    String listTarget,
-    Path filePath,
     Double brokerageFee,
     Double fxFee,
-    Double platformFee
+    Double platformFee,
+    String listTarget,
+    Path filePath
 )
 ```
 
@@ -359,6 +363,10 @@ Its main classes are:
 
 - `Holding`: represents a single asset
 
+- `Watchlist`: stores assets the user is monitoring but has not bought yet
+
+- `WatchlistItem`: stores watchlist asset type, ticker, and optional target price
+
 
 ---
 
@@ -369,8 +377,11 @@ Its main classes are:
 - Commands like `/create` and `/use` call `PortfolioBook`
 
 - Commands that change holdings (`/add`, `/remove`, `/set`) first get the active `Portfolio` from `PortfolioBook`
+  (`/set` supports both ticker-level updates and type+ticker updates)
 
-- `Storage` also rebuilds model state by calling `PortfolioBook` and `Portfolio` methods during load
+- Watchlist commands (`/watch add`, `/watch remove`, `/watch list`, `/watch buy`) call `Watchlist`
+
+- `Storage` rebuilds both portfolio state and watchlist state during load
 
 
 ---
@@ -418,9 +429,32 @@ Validates holding existence and quantity, decides effective sell price, computes
 2. Else use holding `lastPrice` (from `/set` or restored/initial stored price).
 3. If still unavailable, fail.
 
-- `setPriceForTicker(ticker, price)` updates all holdings in this portfolio that share that ticker and returns how many were updated.
+- `setPriceForHolding(type, ticker, price)` updates one specific holding by type and ticker.
+
+- `setPriceForTicker(ticker, price)` is used for ticker-level updates (for example `/setmany` and `/set` without type).
 
 - `getCurrentTotalValue()` and `getTotalUnrealizedPnl()` sum only holdings that currently have a price.
+
+
+---
+
+### `Watchlist` behavior (simple view)
+
+`Watchlist` manages items users may buy later.
+
+Key behavior:
+
+- Each item is keyed by `assetType + "|" + ticker` (no duplicates).
+
+- `addItem(...)` stores an item with optional price.
+
+- `removeItem(...)` deletes a specific item by type and ticker.
+
+- `buyItem(...)` enforces two rules:
+1. The item must already have a price.
+2. The user must provide an existing target portfolio name.
+
+- On successful `buyItem(...)`, 1 unit is added to the target portfolio at the stored watchlist price, and the item is removed from the watchlist.
 
 
 ---
@@ -456,11 +490,13 @@ Cons: Requires storing full trade history and adds complexity.
 
 The API of this component is specified in `Storage.java`.
 
-`Storage` handles three persistence tasks:
+`Storage` handles four persistence tasks:
 
 - Load saved data into memory when the app starts
 
 - Save the latest in-memory data back to file after state-changing commands
+
+- Load and save watchlist data
 
 - Read CSV files for `/setmany` and return a summary of what succeeded/failed
 
@@ -471,9 +507,9 @@ The API of this component is specified in `Storage.java`.
 
 `Storage` is used by `CG2StocksTracker` at two points:
 
-- On startup (`new CG2StocksTracker(...)`), `storage.load()` initializes the `PortfolioBook`
+- On startup (`new CG2StocksTracker(...)`), `storage.load()` initializes the `PortfolioBook` and `storage.loadWatchlist()` initializes `Watchlist`
 
-- After successful state-changing commands (`create`, `add`, `remove`, `set`, `setmany`), `storage.save(portfolioBook)` persists state
+- After successful state-changing commands (`create`, `add`, `remove`, `set`, `setmany`, `watch add`, `watch remove`, `watch buy`), `storage.save(portfolioBook)` and `storage.saveWatchlist(watchlist)` persist state
 
 This keeps command flow in the controller, while file format and file checks stay inside `Storage`.
 
@@ -490,6 +526,10 @@ The save file uses one record per line, separated by `|`:
 
 - `HOLDING|<portfolioName>|<assetType>|<ticker>|<quantity>|<averageBuyPrice>|<lastPrice>`
 
+Watchlist data is stored in a separate file with one record per line:
+
+- `WATCH|<assetType>|<ticker>|<price>`
+
 
 Notes:
 
@@ -501,6 +541,8 @@ Notes:
 `HOLDING|<portfolioName>|<assetType>|<ticker>|<quantity>|<restoredPrice>`.
 
 - For these older rows, `restoredPrice` is used as both `lastPrice` and `averageBuyPrice`.
+
+- For watchlist rows, `price` is optional; an empty field means no price is set.
 
 
 ---
@@ -538,6 +580,15 @@ Notes:
 - Accumulates both success and per-row failure details in `BulkUpdateResult`
 
 
+`loadWatchlist()` / `saveWatchlist(Watchlist)`:
+
+- Uses a separate file at `<main-storage-file>.watchlist`
+
+- Loads and saves watchlist items with optional prices
+
+- Validates watchlist file structure independently from portfolio storage
+
+
 ---
 
 ### Error handling strategy
@@ -545,6 +596,8 @@ Notes:
 - Invalid save-file structure/content is reported as `Corrupted storage file.`
 
 - File-system failures surface operation-specific messages such as `Unable to create storage file.`, `Unable to read storage file.`, `Unable to save storage file.`, and `Unable to read CSV file.`
+
+- Watchlist persistence uses similar operation-specific messages (create/read/save watchlist storage file)
 
 - CSV row-level errors do not stop the whole batch; they are collected in `BulkUpdateResult.failures()`
 

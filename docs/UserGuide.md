@@ -3,8 +3,9 @@ User Guide
 Introduction
 CG2 Stocks Tracker is a command-line portfolio tracker for recording holdings, updating market prices, and viewing realized/unrealized P&L.
 Prices are entered manually via `/set` or `/setmany` (there is no automatic live market feed).
+The app also supports a watchlist for assets you plan to buy but do not yet own.
 
-Application data, including portfolios, holdings, average buy prices, latest saved prices, and realized P&L, is automatically saved and restored across restarts.
+Application data, including portfolios, holdings, watchlist items, average buy prices, latest saved prices, and realized P&L, is automatically saved and restored across restarts.
 
 Quick Start
 Ensure Java 17 or above is installed.
@@ -104,22 +105,42 @@ Output contains:
 - Realized P&L for that sale (signed + / -).
 
 Set market price: /set
-Sets the latest market price for a ticker. This does not sell anything.
+Sets the latest market price for a specific holding (asset type + ticker). This does not sell anything.
 
-Format: /set --ticker TICKER --price PRICE
+Formats:
+- /set --ticker TICKER --price PRICE
+- /set --type TYPE --ticker TICKER --price PRICE
 
 Notes:
 
 PRICE > 0.
-Updates all holdings in active portfolio with matching ticker.
+- Without `--type`: updates all holdings with matching ticker in the active portfolio.
+- With `--type`: updates only the matching `TYPE + TICKER` holding.
+- If `--type` is provided, `TYPE` must be one of `STOCK`, `ETF`, `BOND`.
 Used by /value for unrealized P&L and by /remove as fallback sell price.
 Latest saved prices are restored after restarting the application.
 
-Example: /set --ticker VOO --price 600
+Example: /set --type STOCK --ticker VOO --price 600
 
 Output contains:
 
 Price update confirmation only.
+
+Manage watchlist: /watch
+Tracks assets you may want to buy later.
+
+Formats:
+- `/watch add --type TYPE --ticker TICKER [--price PRICE]`
+- `/watch remove --type TYPE --ticker TICKER`
+- `/watch list`
+- `/watch buy --type TYPE --ticker TICKER --portfolio PORTFOLIO_NAME`
+
+Notes:
+- `TYPE` must be one of `STOCK`, `ETF`, `BOND`.
+- `/watch add` can store an item with or without a price.
+- `/watch buy` only works if that watchlist item already has a price.
+- `/watch buy` requires `--portfolio` and buys into that portfolio.
+- `/watch buy` buys 1 unit at the watchlist price and removes that item from the watchlist.
 
 Bulk set prices from CSV: /setmany
 Loads prices from CSV into active portfolio.
@@ -147,7 +168,7 @@ Total unrealised P&L: sum across holdings.
 Example scenario:
 
 /add --type STOCK --ticker VOO --qty 1 --price 300
-/set --ticker VOO --price 600
+/set --type STOCK --ticker VOO --price 600
 /value
 
 Expected result summary:
@@ -206,7 +227,11 @@ A: Older save files are supported. Legacy holding rows can still be loaded.
 - `/list --portfolios`
 - `/add --type TYPE --ticker TICKER --qty QTY --price PRICE [--brokerage FEE] [--fx FEE] [--platform FEE]`
 - `/remove --type TYPE --ticker TICKER [--qty QTY] [--price PRICE] [--brokerage FEE] [--fx FEE] [--platform FEE]`
-- `/set --ticker TICKER --price PRICE`
+- `/watch add --type TYPE --ticker TICKER [--price PRICE]`
+- `/watch remove --type TYPE --ticker TICKER`
+- `/watch list`
+- `/watch buy --type TYPE --ticker TICKER --portfolio PORTFOLIO_NAME`
+- `/set --ticker TICKER --price PRICE [--type TYPE]`
 - `/setmany --file FILEPATH`
 - `/value`
 - `/insights [--type stock|etf|bond] [--top N] [--chart]`
