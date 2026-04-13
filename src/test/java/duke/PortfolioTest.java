@@ -88,6 +88,18 @@ public class PortfolioTest {
     }
 
     @Test
+    void removeHolding_fullSellWithFloatingPointResidue_removesHoldingFromPortfolio() {
+        Portfolio portfolio = new Portfolio("demo");
+        portfolio.addHolding(AssetType.STOCK, "AAPL", 0.1, 100, 0);
+        portfolio.addHolding(AssetType.STOCK, "AAPL", 0.2, 100, 0);
+
+        Portfolio.RemoveResult result = portfolio.removeHolding(AssetType.STOCK, "AAPL", 0.3, 100.0, 0);
+
+        assertEquals(0.3, result.soldQuantity(), 1e-12);
+        assertFalse(portfolio.hasHolding(AssetType.STOCK, "AAPL"));
+    }
+
+    @Test
     void addHolding_existingHoldingWithFees_recomputesAverageCostAcrossTrades() {
         Portfolio portfolio = new Portfolio("demo");
 
