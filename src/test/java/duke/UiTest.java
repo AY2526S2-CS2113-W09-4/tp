@@ -177,6 +177,36 @@ public class UiTest {
     }
 
     @Test
+    void showInsightsTable_withTopN_keepsLosersAndUsesFullSummary() {
+        Ui ui = new Ui();
+        Portfolio portfolio = new Portfolio("t1");
+        portfolio.addHolding(AssetType.STOCK, "AAA", 2, 100, 0);
+        portfolio.addHolding(AssetType.STOCK, "BBB", 1, 50, 0);
+        portfolio.addHolding(AssetType.ETF, "CCC", 5, 20, 0);
+        portfolio.addHolding(AssetType.BOND, "DDD", 3, 1000, 0);
+
+        portfolio.setPriceForHolding(AssetType.STOCK, "AAA", 150);
+        portfolio.setPriceForHolding(AssetType.STOCK, "BBB", 30);
+        portfolio.setPriceForHolding(AssetType.ETF, "CCC", 25);
+        portfolio.setPriceForHolding(AssetType.BOND, "DDD", 950);
+
+        ui.showInsightsTable(portfolio, null, 10, false);
+
+        String output = capturedOut.toString();
+        assertTrue(output.contains("View: type=ALL, top=10"));
+        assertTrue(output.contains("AAA"));
+        assertTrue(output.contains("BBB"));
+        assertTrue(output.contains("CCC"));
+        assertTrue(output.contains("DDD"));
+        assertTrue(output.contains("- Holdings: 4 (priced: 4, unpriced: 0)"));
+        assertTrue(output.contains("- Open cost basis: 3350.00"));
+        assertTrue(output.contains("- Unrealized P&L: -45.00 (-1.34%)"));
+        assertTrue(output.contains("- Net P&L: -45.00"));
+        assertTrue(output.contains("- Top contributor: AAA +100.00"));
+        assertTrue(output.contains("- Top detractor: DDD -150.00"));
+    }
+
+    @Test
     void formatHelpers_roundAsExpected() {
         assertEquals("123.46", Ui.formatMoney(123.456));
         assertEquals("12.34", Ui.formatNumber(12.340000));
