@@ -196,6 +196,12 @@ public class ParserTest {
     }
 
     @Test
+    void parseCreate_withSlashPrefixedName_throws() {
+        AppException ex = assertThrows(AppException.class, () -> parser.parse("/create /trading"));
+        assertEquals("Portfolio name cannot start with '/'", ex.getMessage());
+    }
+
+    @Test
     void parseCreate_withUnclosedQuote_throws() {
         assertThrows(AppException.class, () -> parser.parse("/create \"long term portfolio"));
     }

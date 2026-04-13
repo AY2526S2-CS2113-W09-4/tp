@@ -47,6 +47,9 @@ public class Parser {
             throw new AppException("Usage: /create NAME");
         }
         String name = joinTail(tokens, 1);
+        if (name.stripLeading().startsWith("/")) {
+            throw new AppException("Portfolio name cannot start with '/'");
+        }
         return new ParsedCommand(CommandType.CREATE, name, null, null, null, null,
                 null, null, null, null, null);
     }

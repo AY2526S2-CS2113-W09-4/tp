@@ -109,6 +109,10 @@ Examples:
 - `/create longterm`
 - `/create "Long Term Portfolio"`
 
+Constraint:
+
+- Portfolio name must not start with `/`.
+
 Expected result:
 
 - Portfolio is created.
