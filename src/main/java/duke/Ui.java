@@ -108,7 +108,7 @@ public class Ui {
                    /watch add --type TYPE --ticker TICKER [--price PRICE]
                    /watch remove --type TYPE --ticker TICKER
                    /watch list
-                   /watch buy --type TYPE --ticker TICKER --portfolio NAME
+                   /watch buy --type TYPE --ticker TICKER --qty QTY --portfolio NAME
                    /set --ticker TICKER --price PRICE [--type TYPE]
                    /setmany --file FILEPATH
                    /value

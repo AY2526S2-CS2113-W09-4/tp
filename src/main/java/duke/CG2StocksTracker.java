@@ -354,11 +354,12 @@ public class CG2StocksTracker {
     private void handleWatchBuy(ParsedCommand command) throws AppException {
         AssetType type = command.assetType();
         String ticker = command.ticker();
+        double quantity = command.quantity();
         String portfolioName = command.listTarget();
 
         Watchlist.BuyResult result;
         try {
-            result = watchlist.buyItem(type, ticker, portfolioName, portfolioBook);
+            result = watchlist.buyItem(type, ticker, quantity, portfolioName, portfolioBook);
         } catch (IllegalArgumentException e) {
             throw new AppException(e.getMessage());
         }
