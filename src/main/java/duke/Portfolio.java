@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 
 public class Portfolio {
+    private static final double QUANTITY_EPSILON = 1e-12;
     private final String name;
     private final Map<String, Holding> holdings;
     private double totalRealizedPnl;
@@ -52,11 +53,14 @@ public class Portfolio {
         }
 
         Holding holding = holdings.get(key);
-        double quantityToRemove = quantity == null ? holding.getQuantity() : quantity;
+        double currentQuantity = holding.getQuantity();
+        double quantityToRemove = quantity == null ? currentQuantity : quantity;
 
-        if (quantityToRemove <= 0 || quantityToRemove > holding.getQuantity()) {
+        boolean matchesFullQuantity = areEquivalentQuantities(quantityToRemove, currentQuantity);
+        if (quantityToRemove <= 0 || (quantityToRemove > currentQuantity && !matchesFullQuantity)) {
             throw new IllegalArgumentException("Invalid quantity for remove: " + ticker);
         }
+        double effectiveQuantityToRemove = matchesFullQuantity ? currentQuantity : quantityToRemove;
 
         Double holdingPrice = holding.getLastPrice();
         double effectivePrice;
@@ -69,14 +73,20 @@ public class Portfolio {
                     + ticker);
         }
 
-        double realizedDelta = holding.removeQuantity(quantityToRemove, effectivePrice, fees);
+        double realizedDelta = holding.removeQuantity(effectiveQuantityToRemove, effectivePrice, fees);
         totalRealizedPnl += realizedDelta;
 
         if (holding.getQuantity() == 0) {
             holdings.remove(key);
         }
 
-        return new RemoveResult(quantityToRemove, effectivePrice, fees, realizedDelta);
+        return new RemoveResult(effectiveQuantityToRemove, effectivePrice, fees, realizedDelta);
+    }
+
+    private boolean areEquivalentQuantities(double left, double right) {
+        double magnitude = Math.max(Math.abs(left), Math.abs(right));
+        double tolerance = Math.max(QUANTITY_EPSILON, 8 * Math.ulp(magnitude));
+        return Math.abs(left - right) <= tolerance;
     }
 
     public int setPriceForTicker(String ticker, double price) {

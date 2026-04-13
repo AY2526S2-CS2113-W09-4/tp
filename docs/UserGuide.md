@@ -23,8 +23,10 @@ CG2StocksTracker is designed to give a clear, accurate view of your holdings wit
 5. Run the app with:
 
 ```bash
-java -jar <release-name>.jar
+java -jar tp.jar
 ```
+
+If your downloaded file has a different name, replace `tp.jar` with that filename.
 
 6. Type commands and press Enter.
 7. Use `/help` to view available commands.
@@ -52,6 +54,8 @@ Notes about command syntax:
 - Duplicate options in one command are rejected.
 - Unknown options are rejected.
 - Portfolio names can contain spaces when quoted. Example: `/create "Long Term"`.
+- Portfolio names are case-insensitive. Example: `/use GROWTH` is treated as `/use growth`.
+- Portfolio names preserve their original casing in storage and display.
 - Quantity and price fields that require positive values must be finite and `> 0` (for example, `NaN` and `Infinity` are rejected).
 - Fee fields (`--brokerage`, `--fx`, `--platform`) must be `>= 0`.
 
@@ -65,6 +69,7 @@ CG2StocksTracker stores data in plain text files under `data/`.
 Data is saved automatically after successful state-changing commands:
 
 - `/create`
+- `/use`
 - `/add`
 - `/remove`
 - `/set`
@@ -106,6 +111,11 @@ Examples:
 - `/create longterm`
 - `/create "Long Term Portfolio"`
 
+Constraint:
+
+- Portfolio name must not start with `/`.
+- Portfolio name matching is case-insensitive and displayed as originally entered.
+
 Expected result:
 
 - Portfolio is created.
@@ -125,7 +135,7 @@ Example:
 
 Expected result:
 
-- Active portfolio changes to `NAME`.
+- Active portfolio changes to `NAME` (case-insensitive match).
 
 ### List holdings or portfolios: `/list`
 
@@ -145,6 +155,7 @@ Notes:
 - If no active portfolio exists, `/list` shows portfolio names.
 - Type-filtered list keeps the same table style but only one asset type.
 - `/list --portfolios` shows portfolio-level realized and unrealized P&L in alphabetical order.
+- If there are no portfolios yet, `/list --portfolios` shows a message prompting you to create one.
 - Holdings table columns are: `TYPE`, `TICKR`, `QTY`, `AVG_BUY`, `MKT_PRICE`, `VALUE`.
 - `AVG_BUY` is cost basis. `MKT_PRICE` is the latest market price reference. `VALUE = QTY x MKT_PRICE`.
 

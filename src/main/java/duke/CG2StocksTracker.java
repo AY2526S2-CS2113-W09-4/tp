@@ -150,20 +150,23 @@ public class CG2StocksTracker {
         String name = command.name();
         portfolioBook.createPortfolio(name);
         save();
-        ui.showMessage("Created portfolio: " + name);
+        Portfolio createdPortfolio = portfolioBook.getPortfolio(name);
+        assert createdPortfolio != null : "Created portfolio should exist";
+        ui.showMessage("Created portfolio: " + createdPortfolio.getName());
         ui.showMessage("Active portfolio: " + portfolioBook.getActivePortfolioName());
     }
 
     /**
-     * Switches the active portfolio.
+     * Switches the active portfolio and persists the updated active context.
      *
      * @param command parsed use command.
-     * @throws AppException if the target portfolio does not exist.
+     * @throws AppException if the target portfolio does not exist or saving fails.
      */
     private void handleUse(ParsedCommand command) throws AppException {
         String name = command.name();
         portfolioBook.usePortfolio(name);
-        ui.showMessage("Active portfolio: " + name);
+        save();
+        ui.showMessage("Active portfolio: " + portfolioBook.getActivePortfolioName());
     }
 
     /**

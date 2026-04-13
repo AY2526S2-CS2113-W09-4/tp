@@ -196,6 +196,12 @@ public class ParserTest {
     }
 
     @Test
+    void parseCreate_withSlashPrefixedName_throws() {
+        AppException ex = assertThrows(AppException.class, () -> parser.parse("/create /trading"));
+        assertEquals("Portfolio name cannot start with '/'", ex.getMessage());
+    }
+
+    @Test
     void parseCreate_withUnclosedQuote_throws() {
         assertThrows(AppException.class, () -> parser.parse("/create \"long term portfolio"));
     }
@@ -263,5 +269,19 @@ public class ParserTest {
     void parseAdd_withInfinityFee_throws() {
         assertThrows(AppException.class, () ->
                 parser.parse("/add --type stock --ticker VOO --qty 1 --price 100 --brokerage Infinity"));
+    }
+
+    @Test
+    void parseAdd_withMissingTickerValue_reportsTickerOption() {
+        AppException ex = assertThrows(AppException.class, () ->
+                parser.parse("/add --type 1 --ticker --qty 3"));
+        assertEquals("Missing value for option: --ticker", ex.getMessage());
+    }
+
+    @Test
+    void parseAdd_withMissingTypeValue_reportsTypeOption() {
+        AppException ex = assertThrows(AppException.class, () ->
+                parser.parse("/add --type --ticker AAPL --qty 3"));
+        assertEquals("Missing value for option: --type", ex.getMessage());
     }
 }
