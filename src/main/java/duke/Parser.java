@@ -46,10 +46,8 @@ public class Parser {
         if (tokens.size() < 2) {
             throw new AppException("Usage: /create NAME");
         }
-        String name = joinTail(tokens, 1);
-        if (name.stripLeading().startsWith("/")) {
-            throw new AppException("Portfolio name cannot start with '/'");
-        }
+        String name = joinTail(tokens, 1).strip();
+        validatePortfolioName(name);
         return new ParsedCommand(CommandType.CREATE, name, null, null, null, null,
                 null, null, null, null, null);
     }
@@ -58,9 +56,19 @@ public class Parser {
         if (tokens.size() < 2) {
             throw new AppException("Usage: /use NAME");
         }
-        String name = joinTail(tokens, 1);
+        String name = joinTail(tokens, 1).strip();
+        validatePortfolioName(name);
         return new ParsedCommand(CommandType.USE, name, null, null, null, null,
                 null, null, null, null, null);
+    }
+
+    private void validatePortfolioName(String name) throws AppException {
+        if (name == null || name.isBlank()) {
+            throw new AppException("Portfolio name must not be blank");
+        }
+        if (name.startsWith("/")) {
+            throw new AppException("Portfolio name cannot start with '/'");
+        }
     }
 
     private ParsedCommand parseList(List<String> tokens) throws AppException {
