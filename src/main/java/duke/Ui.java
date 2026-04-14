@@ -286,7 +286,7 @@ public class Ui {
                 formatSignedMoney(holding.getUnrealizedPnl())));
         }
 
-            System.out.println("Total unrealized P&L: " + formatSignedMoney(portfolio.getTotalUnrealizedPnl()));
+        System.out.println("Total unrealized P&L: " + formatSignedMoney(portfolio.getTotalUnrealizedPnl()));
     }
 
     /**
